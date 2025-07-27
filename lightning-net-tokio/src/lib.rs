@@ -638,6 +638,8 @@ mod tests {
 				record.args
 			);
 		}
+
+		fn export(&self, their_node_id: PublicKey, msg: UnsignedGossipMessage) {}
 	}
 
 	struct MsgHandler {
