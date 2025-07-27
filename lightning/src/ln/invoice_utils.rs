@@ -695,7 +695,7 @@ impl<'a, 'b, L: Deref> Logger for WithChannelDetails<'a, 'b, L> where L::Target:
 		self.logger.log(record)
 	}
 
-	fn export(&self, msg: crate::ln::msgs::UnsignedGossipMessage) {}
+	fn export(&self, their_node_id: PublicKey, msg: crate::ln::msgs::UnsignedGossipMessage) {}
 }
 
 impl<'a, 'b, L: Deref> WithChannelDetails<'a, 'b, L> where L::Target: Logger {

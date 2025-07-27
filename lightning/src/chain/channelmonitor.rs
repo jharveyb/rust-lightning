@@ -1325,7 +1325,7 @@ impl<'a, L: Deref> Logger for WithChannelMonitor<'a, L> where L::Target: Logger 
 		self.logger.log(record)
 	}
 
-	fn export(&self, msg: crate::ln::msgs::UnsignedGossipMessage) {}
+	fn export(&self, their_node_id: PublicKey, msg: crate::ln::msgs::UnsignedGossipMessage) {}
 }
 
 impl<'a, L: Deref> WithChannelMonitor<'a, L> where L::Target: Logger {

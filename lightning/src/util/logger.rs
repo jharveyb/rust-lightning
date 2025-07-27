@@ -165,7 +165,7 @@ pub trait Logger {
 	fn log(&self, record: Record);
 
 	/// Exports a gossip message for observation by an external program.
-	fn export(&self, msg: UnsignedGossipMessage);
+	fn export(&self, their_node_id: PublicKey, msg: UnsignedGossipMessage);
 }
 
 /// Adds relevant context to a [`Record`] before passing it to the wrapped [`Logger`].
@@ -203,7 +203,10 @@ where
 		self.logger.log(record)
 	}
 
-	fn export(&self, msg: UnsignedGossipMessage) {}
+	fn export(&self, their_node_id: PublicKey, msg: UnsignedGossipMessage) {
+		// Should get node ID from context instead
+		self.logger.export(their_node_id, msg);
+	}
 }
 
 impl<'a, L: Deref> WithContext<'a, L>

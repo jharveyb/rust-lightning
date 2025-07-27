@@ -24,7 +24,7 @@ use crate::events::{MessageSendEvent, MessageSendEventsProvider};
 use crate::ln::types::ChannelId;
 use crate::types::features::{InitFeatures, NodeFeatures};
 use crate::ln::msgs;
-use crate::ln::msgs::{ChannelMessageHandler, Init, LightningError, SocketAddress, OnionMessageHandler, RoutingMessageHandler};
+use crate::ln::msgs::{ChannelMessageHandler, Init, LightningError, SocketAddress, OnionMessageHandler, RoutingMessageHandler, UnsignedGossipMessage};
 use crate::util::ser::{VecWriter, Writeable, Writer};
 use crate::ln::peer_channel_encryptor::{PeerChannelEncryptor, NextNoiseStep, MessageBuf, MSG_BUF_ALLOC_SIZE};
 use crate::ln::wire;
@@ -1785,6 +1785,26 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 	{
 		if is_gossip_msg(message.type_id()) {
 			log_gossip!(logger, "Received message {:?} from {}", message, log_pubkey!(their_node_id));
+			match &message {
+				wire::Message::ChannelAnnouncement(msg) => {
+					// add 256 bytes for 4 sigs
+					logger.export(
+						their_node_id, 
+					UnsignedGossipMessage::ChannelAnnouncement(&msg.contents));
+				}
+				wire::Message::ChannelUpdate(msg) => {
+					logger.export(
+						their_node_id, 
+						UnsignedGossipMessage::ChannelUpdate(&msg.contents));
+				}
+				wire::Message::NodeAnnouncement(msg) => {
+					logger.export(
+						their_node_id, 
+						UnsignedGossipMessage::NodeAnnouncement(&msg.contents));
+				}
+				// Skip the query and reply msgs
+				_ => {}
+			};
 		} else {
 			log_trace!(logger, "Received message {:?} from {}", message, log_pubkey!(their_node_id));
 		}
