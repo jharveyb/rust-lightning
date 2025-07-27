@@ -23,6 +23,7 @@ use crate::ln::msgs;
 use crate::ln::msgs::{
 	BaseMessageHandler, ChannelMessageHandler, Init, LightningError, MessageSendEvent,
 	OnionMessageHandler, RoutingMessageHandler, SendOnlyMessageHandler, SocketAddress,
+	UnsignedGossipMessage,
 };
 use crate::ln::peer_channel_encryptor::{
 	MessageBuf, NextNoiseStep, PeerChannelEncryptor, MSG_BUF_ALLOC_SIZE,
@@ -2396,6 +2397,26 @@ where
 	> {
 		if is_gossip_msg(message.type_id()) {
 			log_gossip!(logger, "Received message {:?} from {}", message, their_node_id);
+			match &message {
+				wire::Message::ChannelAnnouncement(msg) => {
+					// add 256 bytes for 4 sigs
+					logger.export(
+						their_node_id, 
+					UnsignedGossipMessage::ChannelAnnouncement(&msg.contents));
+				}
+				wire::Message::ChannelUpdate(msg) => {
+					logger.export(
+						their_node_id, 
+						UnsignedGossipMessage::ChannelUpdate(&msg.contents));
+				}
+				wire::Message::NodeAnnouncement(msg) => {
+					logger.export(
+						their_node_id, 
+						UnsignedGossipMessage::NodeAnnouncement(&msg.contents));
+				}
+				// Skip the query and reply msgs
+				_ => {}
+			};
 		} else {
 			log_trace!(logger, "Received message {:?} from {}", message, their_node_id);
 		}

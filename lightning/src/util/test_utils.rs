@@ -1730,7 +1730,7 @@ impl Logger for TestLogger {
 		}
 	}
 
-	fn export(&self, msg: crate::ln::msgs::UnsignedGossipMessage) {}
+	fn export(&self, their_node_id: PublicKey, msg: crate::ln::msgs::UnsignedGossipMessage) {}
 }
 
 pub struct TestNodeSigner {
