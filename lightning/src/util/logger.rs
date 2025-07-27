@@ -19,6 +19,7 @@ use core::cmp;
 use core::fmt;
 use core::ops::Deref;
 
+use crate::ln::msgs::UnsignedGossipMessage;
 use crate::ln::types::ChannelId;
 #[cfg(c_bindings)]
 use crate::prelude::*; // Needed for String
@@ -162,6 +163,9 @@ impl_record!(, 'a);
 pub trait Logger {
 	/// Logs the [`Record`].
 	fn log(&self, record: Record);
+
+	/// Exports a gossip message for observation by an external program.
+	fn export(&self, msg: UnsignedGossipMessage);
 }
 
 /// Adds relevant context to a [`Record`] before passing it to the wrapped [`Logger`].
@@ -198,6 +202,8 @@ where
 		}
 		self.logger.log(record)
 	}
+
+	fn export(&self, msg: UnsignedGossipMessage) {}
 }
 
 impl<'a, L: Deref> WithContext<'a, L>

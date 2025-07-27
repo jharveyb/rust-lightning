@@ -1729,6 +1729,8 @@ impl Logger for TestLogger {
 			println!("{}", s);
 		}
 	}
+
+	fn export(&self, msg: crate::ln::msgs::UnsignedGossipMessage) {}
 }
 
 pub struct TestNodeSigner {
