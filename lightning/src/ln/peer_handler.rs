@@ -2004,6 +2004,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 				self.message_handler.custom_message_handler.handle_custom_message(custom, their_node_id)?;
 			},
 		};
+		// Ok(None)
 		Ok(should_forward)
 	}
 
@@ -2044,7 +2045,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 					if except_node.is_some() && peer.their_node_id.as_ref().map(|(pk, _)| pk) == except_node {
 						continue;
 					}
-					self.enqueue_encoded_gossip_broadcast(&mut *peer, MessageBuf::from_encoded(&encoded_msg));
+					// self.enqueue_encoded_gossip_broadcast(&mut *peer, MessageBuf::from_encoded(&encoded_msg));
 				}
 			},
 			wire::Message::NodeAnnouncement(ref msg) => {
@@ -2072,7 +2073,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 					if except_node.is_some() && peer.their_node_id.as_ref().map(|(pk, _)| pk) == except_node {
 						continue;
 					}
-					self.enqueue_encoded_gossip_broadcast(&mut *peer, MessageBuf::from_encoded(&encoded_msg));
+					// self.enqueue_encoded_gossip_broadcast(&mut *peer, MessageBuf::from_encoded(&encoded_msg));
 				}
 			},
 			wire::Message::ChannelUpdate(ref msg) => {
@@ -2095,7 +2096,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 					if except_node.is_some() && peer.their_node_id.as_ref().map(|(pk, _)| pk) == except_node {
 						continue;
 					}
-					self.enqueue_encoded_gossip_broadcast(&mut *peer, MessageBuf::from_encoded(&encoded_msg));
+					// self.enqueue_encoded_gossip_broadcast(&mut *peer, MessageBuf::from_encoded(&encoded_msg));
 				}
 			},
 			_ => debug_assert!(false, "We shouldn't attempt to forward anything but gossip messages"),
@@ -2368,6 +2369,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 							self.enqueue_message(&mut *get_peer_for_forwarding!(node_id)?, update_msg);
 						},
 						MessageSendEvent::BroadcastChannelAnnouncement { msg, update_msg } => {
+							// log_debug!(self.logger, "Not handling BroadcastChannelAnnouncement event in peer_handler for short channel id {}", msg.contents.short_channel_id);
 							log_debug!(self.logger, "Handling BroadcastChannelAnnouncement event in peer_handler for short channel id {}", msg.contents.short_channel_id);
 							match self.message_handler.route_handler.handle_channel_announcement(None, &msg) {
 								Ok(_) | Err(LightningError { action: msgs::ErrorAction::IgnoreDuplicateGossip, .. }) => {
@@ -2387,6 +2389,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 							}
 						},
 						MessageSendEvent::BroadcastChannelUpdate { msg } => {
+							// log_debug!(self.logger, "Not handling BroadcastChannelUpdate event in peer_handler for contents {:?}", msg.contents);
 							log_debug!(self.logger, "Handling BroadcastChannelUpdate event in peer_handler for contents {:?}", msg.contents);
 							match self.message_handler.route_handler.handle_channel_update(None, &msg) {
 								Ok(_) | Err(LightningError { action: msgs::ErrorAction::IgnoreDuplicateGossip, .. }) => {
@@ -2397,6 +2400,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 							}
 						},
 						MessageSendEvent::BroadcastNodeAnnouncement { msg } => {
+							// log_debug!(self.logger, "Not handling BroadcastNodeAnnouncement event in peer_handler for node {}", msg.contents.node_id);
 							log_debug!(self.logger, "Handling BroadcastNodeAnnouncement event in peer_handler for node {}", msg.contents.node_id);
 							match self.message_handler.route_handler.handle_node_announcement(None, &msg) {
 								Ok(_) | Err(LightningError { action: msgs::ErrorAction::IgnoreDuplicateGossip, .. }) => {
@@ -2783,6 +2787,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, RM: Deref, OM: Deref, L: Deref, CM
 			contents: announcement
 		};
 
+		// log_debug!(self.logger, "Not broadcasting NodeAnnouncement after passing it to our own RoutingMessageHandler.");
 		log_debug!(self.logger, "Broadcasting NodeAnnouncement after passing it to our own RoutingMessageHandler.");
 		let _ = self.message_handler.route_handler.handle_node_announcement(None, &msg);
 		self.forward_broadcast_msg(&*self.peers.read().unwrap(), &wire::Message::NodeAnnouncement(msg), None, true);
