@@ -2844,11 +2844,11 @@ const MAX_UNFUNDED_CHANS_PER_PEER: usize = 4;
 
 /// The maximum number of peers from which we will allow pending unfunded channels. Once we reach
 /// this many peers we reject new (inbound) channels from peers with which we don't have a channel.
-const MAX_UNFUNDED_CHANNEL_PEERS: usize = 50;
+const MAX_UNFUNDED_CHANNEL_PEERS: usize = 250;
 
 /// The maximum number of peers which we do not have a (funded) channel with. Once we reach this
 /// many peers we reject new (inbound) connections.
-const MAX_NO_CHANNEL_PEERS: usize = 250;
+const MAX_NO_CHANNEL_PEERS: usize = 1000;
 
 /// The maximum expiration from the current time where an [`Offer`] or [`Refund`] is considered
 /// short-lived, while anything with a greater expiration is considered long-lived.
