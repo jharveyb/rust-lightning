@@ -420,7 +420,7 @@ where
 					}
 				}
 			};
-			let timeout_send_fut = tokio::time::timeout(Duration::from_millis(100), send_fut);
+			let timeout_send_fut = tokio::time::timeout(Duration::from_millis(200), send_fut);
 			if let Ok(Ok(())) = timeout_send_fut.await {
 				Connection::schedule_read(peer_manager, us, reader, read_receiver, write_receiver)
 					.await;
