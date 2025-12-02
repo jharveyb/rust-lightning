@@ -23,7 +23,6 @@ use crate::ln::msgs;
 use crate::ln::msgs::{
 	BaseMessageHandler, ChannelMessageHandler, Init, LightningError, MessageSendEvent,
 	OnionMessageHandler, RoutingMessageHandler, SendOnlyMessageHandler, SocketAddress,
-	UnsignedGossipMessage,
 };
 use crate::ln::peer_channel_encryptor::{
 	MessageBuf, NextNoiseStep, PeerChannelEncryptor, MSG_BUF_ALLOC_SIZE,
@@ -48,7 +47,7 @@ use crate::sign::{NodeSigner, Recipient};
 use crate::types::features::{InitFeatures, NodeFeatures};
 use crate::types::string::PrintableString;
 use crate::util::atomic_counter::AtomicCounter;
-use crate::util::logger::{Level, Logger, WithContext};
+use crate::util::logger::{Level, Logger, MessageExporter, WithContext};
 use crate::util::ser::{VecWriter, Writeable, Writer};
 
 #[allow(unused_imports)]
@@ -963,7 +962,7 @@ pub trait APeerManager {
 	type RM: Deref<Target = Self::RMT>;
 	type OMT: OnionMessageHandler + ?Sized;
 	type OM: Deref<Target = Self::OMT>;
-	type LT: Logger + ?Sized;
+	type LT: Logger + MessageExporter + ?Sized;
 	type L: Deref<Target = Self::LT>;
 	type CMHT: CustomMessageHandler + ?Sized;
 	type CMH: Deref<Target = Self::CMHT>;
@@ -1000,7 +999,7 @@ where
 	CM::Target: ChannelMessageHandler,
 	RM::Target: RoutingMessageHandler,
 	OM::Target: OnionMessageHandler,
-	L::Target: Logger,
+	L::Target: Logger + MessageExporter,
 	CMH::Target: CustomMessageHandler,
 	NS::Target: NodeSigner,
 	SM::Target: SendOnlyMessageHandler,
@@ -1057,7 +1056,7 @@ pub struct PeerManager<
 	CM::Target: ChannelMessageHandler,
 	RM::Target: RoutingMessageHandler,
 	OM::Target: OnionMessageHandler,
-	L::Target: Logger,
+	L::Target: Logger + MessageExporter,
 	CMH::Target: CustomMessageHandler,
 	NS::Target: NodeSigner,
 	SM::Target: SendOnlyMessageHandler,
@@ -1142,7 +1141,7 @@ impl<Descriptor: SocketDescriptor, CM: Deref, OM: Deref, L: Deref, NS: Deref, SM
 where
 	CM::Target: ChannelMessageHandler,
 	OM::Target: OnionMessageHandler,
-	L::Target: Logger,
+	L::Target: Logger + MessageExporter,
 	NS::Target: NodeSigner,
 	SM::Target: SendOnlyMessageHandler,
 {
@@ -1192,7 +1191,7 @@ impl<Descriptor: SocketDescriptor, RM: Deref, L: Deref, NS: Deref>
 		IgnoringMessageHandler,
 	> where
 	RM::Target: RoutingMessageHandler,
-	L::Target: Logger,
+	L::Target: Logger + MessageExporter,
 	NS::Target: NodeSigner,
 {
 	/// Constructs a new `PeerManager` with the given `RoutingMessageHandler`. No channel message
@@ -1291,7 +1290,7 @@ where
 	CM::Target: ChannelMessageHandler,
 	RM::Target: RoutingMessageHandler,
 	OM::Target: OnionMessageHandler,
-	L::Target: Logger,
+	L::Target: Logger + MessageExporter,
 	CMH::Target: CustomMessageHandler,
 	NS::Target: NodeSigner,
 	SM::Target: SendOnlyMessageHandler,
@@ -2397,28 +2396,12 @@ where
 	> {
 		if is_gossip_msg(message.type_id()) {
 			log_gossip!(logger, "Received message {:?} from {}", message, their_node_id);
-			match &message {
-				wire::Message::ChannelAnnouncement(msg) => {
-					// add 256 bytes for 4 sigs
-					logger.export(
-						their_node_id, 
-					UnsignedGossipMessage::ChannelAnnouncement(&msg.contents));
-				}
-				wire::Message::ChannelUpdate(msg) => {
-					logger.export(
-						their_node_id, 
-						UnsignedGossipMessage::ChannelUpdate(&msg.contents));
-				}
-				wire::Message::NodeAnnouncement(msg) => {
-					logger.export(
-						their_node_id, 
-						UnsignedGossipMessage::NodeAnnouncement(&msg.contents));
-				}
-				// Skip the query and reply msgs
-				_ => {}
-			};
 		} else {
 			log_trace!(logger, "Received message {:?} from {}", message, their_node_id);
+		}
+
+		if is_inbound_msg_for_export(message.type_id()) {
+			logger.export(their_node_id, &message);
 		}
 
 		let mut should_forward = None;
@@ -3705,6 +3688,20 @@ fn is_gossip_msg(type_id: u16) -> bool {
 		| msgs::ReplyChannelRange::TYPE
 		| msgs::QueryShortChannelIds::TYPE
 		| msgs::ReplyShortChannelIdsEnd::TYPE => true,
+		_ => false,
+	}
+}
+
+// Flag which message types we want to export via the Logger, for messages we receive.
+fn is_inbound_msg_for_export(type_id: u16) -> bool {
+	match type_id {
+		// The 3 horsepeople of Gossip
+		msgs::ChannelAnnouncement::TYPE
+		| msgs::ChannelUpdate::TYPE
+		| msgs::NodeAnnouncement::TYPE => true,
+		// Ideally we compute per-peer latency
+		msgs::Ping::TYPE | msgs::Pong::TYPE => true,
+		// TODO: should we record when peers query us for gossip?
 		_ => false,
 	}
 }

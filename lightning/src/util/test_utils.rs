@@ -55,7 +55,7 @@ use crate::util::config::UserConfig;
 use crate::util::dyn_signer::{
 	DynKeysInterface, DynKeysInterfaceTrait, DynPhantomKeysInterface, DynSigner,
 };
-use crate::util::logger::{Logger, Record};
+use crate::util::logger::{Logger, MessageExporter, Record};
 #[cfg(feature = "std")]
 use crate::util::mut_global::MutGlobal;
 use crate::util::persist::{KVStore, KVStoreSync, MonitorName};
@@ -1729,9 +1729,9 @@ impl Logger for TestLogger {
 			println!("{}", s);
 		}
 	}
-
-	fn export(&self, their_node_id: PublicKey, msg: crate::ln::msgs::UnsignedGossipMessage) {}
 }
+
+impl MessageExporter for TestLogger {}
 
 pub struct TestNodeSigner {
 	node_secret: SecretKey,

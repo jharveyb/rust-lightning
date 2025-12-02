@@ -19,7 +19,7 @@ use core::cmp;
 use core::fmt;
 use core::ops::Deref;
 
-use crate::ln::msgs::UnsignedGossipMessage;
+pub use crate::ln::wire::{Message, Type as MessageType};
 use crate::ln::types::ChannelId;
 #[cfg(c_bindings)]
 use crate::prelude::*; // Needed for String
@@ -163,9 +163,15 @@ impl_record!(, 'a);
 pub trait Logger {
 	/// Logs the [`Record`].
 	fn log(&self, record: Record);
+}
 
-	/// Exports a gossip message for observation by an external program.
-	fn export(&self, their_node_id: PublicKey, msg: UnsignedGossipMessage);
+/// A trait for exporting gossip messages for observation by an external program.
+pub trait MessageExporter: Logger {
+	/// No-op; implementors must override this.
+	fn export<T: core::fmt::Debug + MessageType>(&self, their_node_id: PublicKey, msg: &Message<T>) {
+		let _ = their_node_id;
+		let _ = msg;
+	}
 }
 
 /// Adds relevant context to a [`Record`] before passing it to the wrapped [`Logger`].
@@ -202,11 +208,16 @@ where
 		}
 		self.logger.log(record)
 	}
+}
 
-	fn export(&self, their_node_id: PublicKey, msg: UnsignedGossipMessage) {
-		// Should get node ID from context instead
-		self.logger.export(their_node_id, msg);
+impl<'a, L: Deref> MessageExporter for WithContext<'a, L>
+where
+	L::Target: MessageExporter,
+{
+	fn export<T: core::fmt::Debug + MessageType>(&self, their_node_id: PublicKey, msg: &Message<T>) {
+	    self.logger.export(their_node_id, msg)
 	}
+
 }
 
 impl<'a, L: Deref> WithContext<'a, L>
