@@ -1845,8 +1845,6 @@ where
 		record.payment_hash = self.payment_hash;
 		self.logger.log(record)
 	}
-
-	fn export(&self, their_node_id: PublicKey, msg: crate::ln::msgs::UnsignedGossipMessage) {}
 }
 
 impl<'a, L: Deref> WithChannelMonitor<'a, L>

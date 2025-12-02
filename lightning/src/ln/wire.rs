@@ -30,16 +30,17 @@ pub trait CustomMessageReader {
 	) -> Result<Option<Self::CustomMessage>, msgs::DecodeError>;
 }
 
-// TestEq is a dummy trait which requires PartialEq when built in testing, and otherwise is
-// blanket-implemented for all types.
-
+/// TestEq is a dummy trait which requires PartialEq when built in testing, and otherwise is
+/// blanket-implemented for all types.
 #[cfg(test)]
 pub trait TestEq: PartialEq {}
 #[cfg(test)]
 impl<T: PartialEq> TestEq for T {}
 
+/// TestEq is a dummy trait which requires PartialEq when built in testing, and otherwise is
+/// blanket-implemented for all types.
 #[cfg(not(test))]
-pub(crate) trait TestEq {}
+pub trait TestEq {}
 #[cfg(not(test))]
 impl<T> TestEq for T {}
 
@@ -48,7 +49,7 @@ impl<T> TestEq for T {}
 #[allow(missing_docs)]
 #[derive(Debug)]
 #[cfg_attr(any(test, feature = "_test_utils"), derive(PartialEq))]
-pub(crate) enum Message<T: core::fmt::Debug + Type + TestEq> {
+pub enum Message<T: core::fmt::Debug + Type + TestEq> {
 	Init(msgs::Init),
 	Error(msgs::ErrorMessage),
 	Warning(msgs::WarningMessage),
