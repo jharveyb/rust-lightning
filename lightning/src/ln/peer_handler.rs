@@ -47,7 +47,7 @@ use crate::sign::{NodeSigner, Recipient};
 use crate::types::features::{InitFeatures, NodeFeatures};
 use crate::types::string::PrintableString;
 use crate::util::atomic_counter::AtomicCounter;
-use crate::util::logger::{Level, Logger, MessageExporter, WithContext};
+use crate::util::logger::{Level, Logger, MessageExporter, ExportMessageDirection, WithContext};
 use crate::util::ser::{VecWriter, Writeable, Writer};
 
 #[allow(unused_imports)]
@@ -1718,6 +1718,10 @@ where
 			} else {
 				log_trace!(logger, "Enqueueing message {:?} to {}", message, node_id);
 			}
+
+			if is_outbound_msg_for_export(message.type_id()) {
+				logger.export_bin(node_id, message, ExportMessageDirection::Outbound);
+			}
 		} else {
 			debug_assert!(false, "node_id should be set by the time we send a message");
 		}
@@ -2401,7 +2405,7 @@ where
 		}
 
 		if is_inbound_msg_for_export(message.type_id()) {
-			logger.export(their_node_id, &message);
+			logger.export(their_node_id, &message, ExportMessageDirection::Inbound);
 		}
 
 		let mut should_forward = None;
@@ -3695,6 +3699,22 @@ fn is_gossip_msg(type_id: u16) -> bool {
 // Flag which message types we want to export via the Logger, for messages we receive.
 fn is_inbound_msg_for_export(type_id: u16) -> bool {
 	match type_id {
+		// The 3 horsepeople of Gossip
+		msgs::ChannelAnnouncement::TYPE
+		| msgs::ChannelUpdate::TYPE
+		| msgs::NodeAnnouncement::TYPE => true,
+		// Ideally we compute per-peer latency
+		msgs::Ping::TYPE | msgs::Pong::TYPE => true,
+		// TODO: should we record when peers query us for gossip?
+		_ => false,
+	}
+}
+
+// Flag which message types we want to export via the Logger, for messages we send.
+// TODO: will this ever be different that the inbound version?
+fn is_outbound_msg_for_export(type_id: u16) -> bool {
+	match type_id {
+		// TODO: messages we generate manually, related to channels we own
 		// The 3 horsepeople of Gossip
 		msgs::ChannelAnnouncement::TYPE
 		| msgs::ChannelUpdate::TYPE

@@ -239,13 +239,14 @@ impl<T: core::fmt::Debug + Type + TestEq> Message<T> {
 	}
 }
 
+// TODO: Is there a better way to expose this to ldk-node?
 /// Reads a message from the data buffer consisting of a 2-byte big-endian type and a
 /// variable-length payload conforming to the type.
 ///
 /// # Errors
 ///
 /// Returns an error if the message payload could not be decoded as the specified type.
-pub(crate) fn read<R: LengthLimitedRead, T, H: core::ops::Deref>(
+pub fn read<R: LengthLimitedRead, T, H: core::ops::Deref>(
 	buffer: &mut R, custom_reader: H,
 ) -> Result<Message<T>, (msgs::DecodeError, Option<u16>)>
 where
@@ -426,13 +427,14 @@ where
 	}
 }
 
+// TODO: Is there a better way to expose this to ldk-node?
 /// Writes a message to the data buffer encoded as a 2-byte big-endian type and a variable-length
 /// payload.
 ///
 /// # Errors
 ///
 /// Returns an I/O error if the write could not be completed.
-pub(crate) fn write<M: Type + Writeable, W: Writer>(
+pub fn write<M: Type + Writeable, W: Writer>(
 	message: &M, buffer: &mut W,
 ) -> Result<(), io::Error> {
 	message.type_id().write(buffer)?;
