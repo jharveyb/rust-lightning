@@ -19,8 +19,8 @@ use core::cmp;
 use core::fmt;
 use core::ops::Deref;
 
-pub use crate::ln::wire::{Message, Type as MessageType};
 use crate::ln::types::ChannelId;
+pub use crate::ln::wire::{Message, Type as MessageType};
 #[cfg(c_bindings)]
 use crate::prelude::*; // Needed for String
 use crate::types::payment::PaymentHash;
@@ -165,12 +165,59 @@ pub trait Logger {
 	fn log(&self, record: Record);
 }
 
+// TODO: move to some common pkg/lib eventually
+/// An enum used to annotate a wire message with metadata, such as whether
+/// it was received or sent.
+#[derive(Debug, Copy, Clone)]
+#[repr(u8)]
+pub enum ExportMessageDirection {
+	/// Reserved.
+	Unknown,
+
+	/// Message was received from a peer.
+	Inbound,
+
+	/// Our node sent this message.
+	Outbound,
+}
+
+impl std::str::FromStr for ExportMessageDirection {
+	type Err = core::fmt::Error;
+
+	fn from_str(s: &str) -> Result<ExportMessageDirection, Self::Err>{
+		match s {
+			"unknown" => Ok(ExportMessageDirection::Unknown),
+			"inbound" => Ok(ExportMessageDirection::Inbound),
+			"outbound" => Ok(ExportMessageDirection::Outbound),
+			_ => Err(core::fmt::Error),
+		}
+	}
+}
+
+impl From<ExportMessageDirection> for u8 {
+	fn from(direction: ExportMessageDirection) -> u8 {
+		direction as u8
+	}
+}
+
 /// A trait for exporting gossip messages for observation by an external program.
 pub trait MessageExporter: Logger {
 	/// No-op; implementors must override this.
-	fn export<T: core::fmt::Debug + MessageType>(&self, their_node_id: PublicKey, msg: &Message<T>) {
+	fn export<T: core::fmt::Debug + MessageType>(
+		&self, their_node_id: PublicKey, msg: &Message<T>, direction: ExportMessageDirection,
+	) {
 		let _ = their_node_id;
 		let _ = msg;
+		let _ = direction;
+	}
+
+	/// No-op; implementors must override this.
+	fn export_bin<T: core::fmt::Debug + MessageType>(
+		&self, their_node_id: PublicKey, msg: &T, direction: ExportMessageDirection,
+	) {
+		let _ = their_node_id;
+		let _ = msg;
+		let _ = direction;
 	}
 }
 
@@ -214,10 +261,17 @@ impl<'a, L: Deref> MessageExporter for WithContext<'a, L>
 where
 	L::Target: MessageExporter,
 {
-	fn export<T: core::fmt::Debug + MessageType>(&self, their_node_id: PublicKey, msg: &Message<T>) {
-	    self.logger.export(their_node_id, msg)
+	fn export<T: core::fmt::Debug + MessageType>(
+		&self, their_node_id: PublicKey, msg: &Message<T>, direction: ExportMessageDirection,
+	) {
+		self.logger.export(their_node_id, msg, direction);
 	}
 
+	fn export_bin<T: core::fmt::Debug + MessageType>(
+		&self, their_node_id: PublicKey, msg: &T, direction: ExportMessageDirection,
+	) {
+		self.logger.export_bin(their_node_id, msg, direction);
+	}
 }
 
 impl<'a, L: Deref> WithContext<'a, L>
