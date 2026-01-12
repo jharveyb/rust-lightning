@@ -67,5 +67,6 @@ check-cfg = [
     "cfg(require_route_graph_test)",
     "cfg(simple_close)",
     "cfg(peer_storage)",
+    "cfg(tor)",
     "cfg(dual_funding)",
 ]
