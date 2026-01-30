@@ -379,12 +379,12 @@ where
 /// futures are freed, though, because all processing futures are spawned with tokio::spawn, you do
 /// not need to poll the provided future in order to make progress.
 pub fn setup_outbound<PM: Deref + 'static + Send + Sync + Clone>(
-	peer_manager: PM, their_node_id: PublicKey, stream: StdTcpStream,
+	peer_manager: PM, their_node_id: PublicKey, stream: StdTcpStream, their_remote_addr: Option<SocketAddress>,
 ) -> impl std::future::Future<Output = ()>
 where
 	PM::Target: APeerManager<Descriptor = SocketDescriptor>,
 {
-	let remote_addr = get_addr_from_stream(&stream);
+	let remote_addr = their_remote_addr.or(get_addr_from_stream(&stream));
 	let (reader, mut write_receiver, read_receiver, us) = Connection::new(stream);
 	#[cfg(test)]
 	let last_us = Arc::clone(&us);
@@ -470,7 +470,7 @@ where
 	if let Ok(Ok(stream)) =
 		time::timeout(Duration::from_secs(CONNECT_OUTBOUND_TIMEOUT), connect_fut).await
 	{
-		Some(setup_outbound(peer_manager, their_node_id, stream))
+		Some(setup_outbound(peer_manager, their_node_id, stream, None))
 	} else {
 		None
 	}
@@ -490,12 +490,12 @@ where
 	ES::Target: EntropySource,
 {
 	let connect_fut = async {
-		tor_connect(addr, tor_proxy_addr, entropy_source).await.map(|s| s.into_std().unwrap())
+		tor_connect(addr.clone(), tor_proxy_addr, entropy_source).await.map(|s| s.into_std().unwrap())
 	};
 	if let Ok(Ok(stream)) =
 		time::timeout(Duration::from_secs(TOR_CONNECT_OUTBOUND_TIMEOUT), connect_fut).await
 	{
-		Some(setup_outbound(peer_manager, their_node_id, stream))
+		Some(setup_outbound(peer_manager, their_node_id, stream, Some(addr)))
 	} else {
 		None
 	}
@@ -1027,7 +1027,7 @@ mod tests {
 		// 127.0.0.1.
 		let (conn_a, conn_b) = make_tcp_connection();
 
-		let fut_a = super::setup_outbound(Arc::clone(&a_manager), b_pub, conn_a);
+		let fut_a = super::setup_outbound(Arc::clone(&a_manager), b_pub, conn_a, None);
 		let fut_b = super::setup_inbound(b_manager, conn_b);
 
 		tokio::time::timeout(Duration::from_secs(10), a_connected.recv()).await.unwrap();
@@ -1097,7 +1097,7 @@ mod tests {
 		// Call connection setup inside new tokio tasks.
 		let manager_reference = Arc::clone(&a_manager);
 		tokio::spawn(async move { super::setup_inbound(manager_reference, conn_a).await });
-		tokio::spawn(async move { super::setup_outbound(a_manager, b_pub, conn_b).await });
+		tokio::spawn(async move { super::setup_outbound(a_manager, b_pub, conn_b, None).await });
 	}
 
 	#[tokio::test(flavor = "multi_thread")]
